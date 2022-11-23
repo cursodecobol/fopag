@@ -1,0 +1,23 @@
+{
+  // See https://go.microsoft.com/fwlink LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+   "label": "GnuCOBOL - Compile (single file)",
+   "type": "shell",
+   "options": {
+    "env": {
+        "PATH": "C:\\GC312VBI\\bin",
+        "COB_CONFIG_DIR": "c:\\GC312VBI\\config",
+        "COB_COPY_DIR": "c:\\GC312VBI\\copy",
+        "COB_INCLUDE_PATH": "c:\\GC312VBI\\include",
+        "COB_LIB_PATH": "c:\\GC312VBI\\lib",
+       },
+    "command": "cobc",
+    "args": [
+      "-x",
+      "-std=ibm",
+      "-t${fileBasenameNoExtension}.LST",
+      "${file}"
+      ]
+    },
+} 

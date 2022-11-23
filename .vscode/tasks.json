@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GnuCOBOL - Compilar executável",
+      "type": "shell",
+      "command": "c:\\gc312vbi\\bin\\cobc",
+      "options": {
+        "env": {
+          "PATH": "c:\\gc312vbi\\bin",
+          "COB_CONFIG_DIR": "c:\\gc312vbi\\config",
+          "COB_COPY_DIR": "c:\\gc312vbi\\copy",
+          "COB_INCLUDE_PATH": "c:\\gc312vbi\\include",
+          "COB_LIB_PATH": "c:\\gc312vbi\\lib"
+        }
+      },
+      "args": [
+        "-x",
+        "${file}",
+        "-std=ibm",
+        "-Wall",
+        "-I$(workspaceFolder}",
+        "-I${workspaceFolder}\\CopyBooks",
+        "-I${workspaceFolder}\\CopyBooks\\Public",
+        "-t${fileBasenameNoExtension}.LST",
+        "-v",
+        "-g",
+        "-Xref",
+        "-ftsymbols"
+      ],
+      "problemMatcher": ["$gnucobol3-cobc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "GnuCOBOL - Compilar subrotina",
+      "type": "shell",
+      "command": "c:\\gc312vbi\\bin\\cobc",
+      "options": {
+        "env": {
+          "PATH": "c:\\gc312vbi\\bin",
+          "COB_CONFIG_DIR": "c:\\gc312vbi\\config",
+          "COB_COPY_DIR": "c:\\gc312vbi\\copy",
+          "COB_INCLUDE_PATH": "c:\\gc312vbi\\include",
+          "COB_LIB_PATH": "c:\\gc312vbi\\lib"
+        }
+      },
+      "args": [
+        "-o",
+        "${fileBasenameNoExtension}.dll",
+        "-std=ibm",
+        "-Wall",
+        "-I$(workspaceFolder}",
+        "-I${workspaceFolder}\\CopyBooks",
+        "-I${workspaceFolder}\\CopyBooks\\Public",
+        "-t${fileBasenameNoExtension}.LST",
+        "-v",
+        "-g",
+        "-Xref",
+        "-ftsymbols",
+        "${file}"
+      ],
+      "problemMatcher": ["$gnucobol3-cobc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}
