@@ -1,0 +1,41 @@
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Mon Dec 05 08:03:56 2022  Page 0001
+
+LINE    PG/LN  A...B............................................................
+
+000001          IDENTIFICATION DIVISION.
+000002          PROGRAM-ID. FOLHAPAGAMENTO.
+000003          AUTHOR. WESLEY.MENDONCA.
+000004          DATE-WRITTEN. 2021-02-07.
+000005
+000006          ENVIRONMENT DIVISION.
+000007          CONFIGURATION SECTION.
+000008          SOURCE-COMPUTER. IBM-390.
+000009          OBJECT-COMPUTER. IBM-390.
+000010          SPECIAL-NAMES.
+000011             DECIMAL-POINT IS COMMA.
+000012
+000013         PROCEDURE DIVISION.
+000014             DISPLAY 'FOLHAPAGAMENTO - INICIO'
+000015             GOBACK.
+000016        *    STOP RUN.
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Mon Dec 05 08:03:56 2022  Page 0002
+
+SIZE  TYPE           LVL  NAME                           PICTURE
+
+      No fields defined.
+
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Mon Dec 05 08:03:56 2022  Page 0003
+
+NAME                           DEFINED                REFERENCES
+
+
+      No fields defined.
+
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Mon Dec 05 08:03:56 2022  Page 0004
+
+LABEL                          DEFINED                REFERENCES
+
+E FOLHAPAGAMENTO               13
+
+0 warnings in compilation group
+0 errors in compilation group

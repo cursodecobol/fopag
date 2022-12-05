@@ -1,0 +1,641 @@
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0001
+
+LINE    PG/LN  A...B............................................................
+
+000001        ******************************************************************
+000002        * Author: Curso de Cobol - www.cursodecobol.com.br
+000003        * Date  : 07/02/2021
+000004        * Purpose: Processar uma folha de pagamento
+000005        * Tectonics: cobc
+000006        * VSCode: Reabrit com code page ISO 8859-1
+000007        *
+000008        ******************************************************************
+000009        * FOLHAPAGAMENTO1: Código inicial; montamos somente a estrutura
+000010        *                  básica, incluindo leitura.
+000011        *                  Fizemos alguns testes, detectamos situações de
+000012        *                  erro, e de loop infinito.
+000013        *                  - Erro no copybook afeta o programa.
+000014        *                  - Esquecer de "ligar" a condição de fim provoca
+000015        *                    situação de loop infinito.
+000016        *                  - DISPLAY é o "debug" natural mais efetivo para
+000017        *                    detecção de erros em tempo de construção.
+000018        *                    (equivale ao System.out.println() do Java
+000019        ******************************************************************
+000020        * Comentários:
+000021        * ------------
+000022        * Este é um programa de computador escrito em COBOL
+000023        * para fins estritamente didáticos.
+000024        * Ele realiza o cálculo de uma folha de pagamento fictícia,
+000025        * com base nas horas trabalhadas por cada funcionário.
+000026        * Estes apontamentos chegam por meio de transmissão de arquivo,
+000027        * cujo layout está definido no Copybook APONTAMENTOS.cpy.
+000028        * Será fixada uma taxa adicional de 50% sobre horas extras.
+000029        * ARQUIVOS DE SAIDA
+000030        * - Registros processados com sucesso: gravados no arq. FOPAG.TXT
+000031        * - Registros c/erro no processamento: gravados no arq. FOPAGR.TXT
+000032        *
+000033        * Roteiro:
+000034        * 1) Somar vencimentos do mês:
+000035        *    - salário registrado na CTPS
+000036        *    - horas extras
+000037        *    - salário família
+000038        *    - adicionais como: insalubridade, noturno
+000039        ******************************************************************
+000040        * VRS001 - FEV/2021 - IMPLANTACAO
+000041        ******************************************************************
+000042         IDENTIFICATION DIVISION.
+000043        ******************************************************************
+000044         PROGRAM-ID. FOLHAPAGAMENTO1.
+000045         DATE-WRITTEN. 2021-02-07.
+000046        ******************************************************************
+000047         ENVIRONMENT DIVISION.
+000048        ******************************************************************
+000049         CONFIGURATION SECTION.
+000050         SPECIAL-NAMES.
+000051        *-------------*
+000052             DECIMAL-POINT IS COMMA.
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0002
+
+LINE    PG/LN  A...B............................................................
+
+000053        *----------------------------------------------------------------*
+000054         INPUT-OUTPUT SECTION.
+000055        *----------------------------------------------------------------*
+000056         FILE-CONTROL.
+000057        *-------------*
+000058             SELECT APONTAMENTOS         ASSIGN TO "APONTAMENTOS.DAT"
+000059                                         ORGANIZATION IS LINE SEQUENTIAL.
+000060             SELECT RELATORIOFOLHA       ASSIGN TO "RELATORIOFOLHA.TXT"
+000061                                         ORGANIZATION IS LINE SEQUENTIAL.
+000062             SELECT RELATORIOREJ         ASSIGN TO "RELATORIOREJ.TXT"
+000063                                         ORGANIZATION IS LINE SEQUENTIAL.
+000064        ******************************************************************
+000065         DATA DIVISION.
+000066        ******************************************************************
+000067         FILE SECTION.
+000068        *----------------------------------------------------------------*
+000069         FD APONTAMENTOS.
+000070         01 APONTAMENTO-FD.
+000071         COPY APONTAMENTOS
+000072         .
+000001C       ****************************************************************
+000002C       * COPYBOOK: APONTAMENTOS.cpy
+000003C       * AUTOR   : www.cursodecobol.com.br
+000004C       * SISTEMA : FOPAG
+000005C       * OBJETIVO: Layout do arquivo APONTAMENTOS.dat
+000006C       * Tamanho do registro: 68 bytes
+000007C       * Origem dos dados: Sistema externo de Apontamentos (folha de
+000008C       *                   ponto).
+000009C       * - A Legislação CLT é complexa. Reforço que este é um
+000010C       *   sistema didático para fins de ensino da linguagem COBOL.
+000011C       *   A Legislação mais atual pode não estar contemplada
+000012C       *   neste sistema.
+000013C       ****************************************************************
+000014C       *01 FD-APONTAMENTO.
+000015C           03 NR-MATRICULA              PIC X(06).
+000016C           03 NOME-EMPREGADO            PIC X(30).
+000017C           03 VLR-REMUNERACAO-HORA      PIC 9(3)V99.
+000018C           03 QTD-HORAS-NORMAIS         PIC 9(3)V99.
+000019C           03 QTD-HORAS-EXTRAS-50PC     PIC 9(3)V99.
+000020C           03 QTD-HORAS-EXTRAS-100PC    PIC 9(3)V99.
+000021C           03 QTD-DEPENDENTES-IRPF      PIC 9(2).
+000022C           03 QTD-FILHOS-SF             PIC 9(2).
+000023C           03 VLR-PENSAO-ALIMENTICIA    PIC 9(6)V99.
+000024C       ****************************************************************
+000025C       * Descrição dos campos
+000026C       * --------------------
+000027C       * NR-MATRICULA               Número da matricula do empregado
+000028C       * NOME-EMPREGADO             Nome completo do empregado
+000029C       * VLR-REMUNERACAO-HORA       Valor da remuneracao por hora, com
+000030C       *                            base em 220 horas. Divida o salario
+000031C       *                            mensal por 220 e informe neste campo.
+000032C       * QTD-HORAS-NORMAIS          Quantidade de horas trabalhadas no
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0003
+
+LINE    PG/LN  A...B............................................................
+
+000033C       *                            periodo pelo empregado - DECIMAIS.
+000034C       *                            Obs: Para a CLT, a quantidade de
+000035C       *                            horas normais no mês é 220. O
+000036C       *                            excedente são Horas Extras. Este
+000037C       *                            campo será informado, para permitir
+000038C       *                            futuramente o calculo de horas do
+000039C       *                            trabalhador pessoa jurídica (PJ).
+000040C       * QTD-HORAS-EXTRAS-50PC      Quantidade de horas extras realizadas
+000041C       *                            com direito ao acréscimo de 50%.
+000042C       * QTD-HORAS-EXTRAS-100PC     Quantidade de horas extras realizadas
+000043C       *                            com direito ao acréscimo de 100%.
+000044C       * QTD-DEPENDENTES-IRPF       Quantidade de dependentes para fins
+000045C       *                            do Imposto de Renda
+000046C       * QTD-FILHOS-SF              Quantidade de filhos para fins de
+000047C       *                            cálculo do Salário-Família
+000048C       * VLR-PENSAO-ALIMENTICIA     Valor pago a título de Pensão
+000049C       *                            Alimentícia; é um Desconto, e também
+000050C       *                            é dedutível do IRRF.
+000051C       *                            Informar valor total em R$
+000052C       *
+000053C       * - IMPORTANTE: Informar Horas normais e/ou extras em formato
+000054C       *               DECIMAL.
+000055C       *               Exemplo: 8 horas e 23 minutos -> 8,38
+000056C       *                        9 horas e 40 minutos -> 9,67
+000057C       *               (Pesquise no Google por "conversão hora decimal"
+000058C       *               ou "Como eu converto horas convencionais em um
+000059C       *               número decimal?"
+000060C       ******************************************************************
+000073
+000074         FD RELATORIOFOLHA.
+000075         01 RELATORIO-FOLHA-FD.
+000076         COPY RELATORIOFOLHA
+000077         .
+000001C       ****************************************************************
+000002C       * COPYBOOK: RELATORIOFOLHA.cpy
+000003C       * AUTOR   : www.cursodecobol.com.br
+000004C       * SISTEMA : FOPAG
+000005C       * OBJETIVO: Layout do relatório gerado após o processamento dos
+000006C       *           apontamentos recebidos no arquivo "APONTAMENTOS.dat"
+000007C       * Tamanho do registro: 132 bytes
+000008C       ****************************************************************
+000009C       *    01 RELATORIO-FOLHA.
+000010C             02 CABECALHO-FOLHA.
+000011C               03 CAB-LINHA-1.
+000012C                     07 TX-DATA PIC X(10).
+000013C                     07 FILLER REDEFINES TX-DATA.
+000014C                        09 TX-DATA-DIA PIC 9(02).
+000015C                        09 FILLER      PIC X.
+000016C                        09 TX-DATA-MES PIC 9(02).
+000017C                        09 FILLER      PIC X.
+000018C                        09 TX-DATA-ANO PIC 9(04).
+000019C                     07 FILLER  PIC X(30).
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0004
+
+LINE    PG/LN  A...B............................................................
+
+000020C                     07 FILLER  PIC X(30) VALUE
+000021C                        'RELATORIO FOLHA PAGAMENTO'.
+000022C                     07 FILLER  PIC X(81).
+000023C                     07 FILLER  PIC X(05) VALUE 'PAG. '.
+000024C                     07 REL-NUM-PAGINA PIC ZZZ9.
+000025C       *
+000026C               03 CAB-LINHA-2.
+000027C                     07 TX-HORA PIC X(10).
+000028C                     07 FILLER REDEFINES TX-HORA.
+000029C                        09 TX-HORA-HH PIC 9(02).
+000030C                        09 FILLER PIC X.
+000031C                        09 TX-HORA-MM PIC 9(02).
+000032C                        09 FILLER PIC X.
+000033C                        09 TX-HORA-SS PIC 9(02).
+000034C                     07 FILLER  PIC X(30).
+000035C                     07 FILLER  PIC X(14) VALUE
+000036C                        'MES APURACAO: '.
+000037C                     07 TX-MES-APURACAO PIC X(15).
+000038C       *
+000039C               03 CAB-LINHA-3 PIC X(160) VALUE ALL '*'.
+000040C       *
+000041C               03 LINHA-TITULOS.
+000042C                  05 FILLER PIC X(06) VALUE 'MATRIC'.
+000043C                  05 FILLER PIC X.
+000044C                  05 FILLER PIC X(60) VALUE 'NOME EMPREGADO'.
+000045C                  05 FILLER PIC X.
+000046C                  05 FILLER PIC X(06) VALUE 'HR.NOR'.
+000047C                  05 FILLER PIC X.
+000048C                  05 FILLER PIC X(06) VALUE 'VLR.HR'.
+000049C                  05 FILLER PIC X.
+000050C
+000051C                  05 FILLER PIC X(07) VALUE 'VL.HE50'.
+000052C                  05 FILLER PIC X.
+000053C                  05 FILLER PIC X(07) VALUE 'QT.HE50'.
+000054C                  05 FILLER PIC X.
+000055C                  05 FILLER PIC X(08) VALUE 'TOT.HE50'.
+000056C                  05 FILLER PIC X.
+000057C
+000058C                  05 FILLER PIC X(07) VALUE 'VL.H100'.
+000059C                  05 FILLER PIC X.
+000060C                  05 FILLER PIC X(07) VALUE 'QT.H100'.
+000061C                  05 FILLER PIC X.
+000062C                  05 FILLER PIC X(08) VALUE 'TOT.H100'.
+000063C                  05 FILLER PIC X.
+000064C
+000065C                  05 FILLER PIC X(07) VALUE 'SAL.FAM'.
+000066C                  05 FILLER PIC X.
+000067C
+000068C                  05 FILLER PIC X(09) VALUE 'SAL.BRUTO'.
+000069C                  05 FILLER PIC XXXXXX.
+000070C
+000071C                  05 FILLER PIC X(06) VALUE 'IRRF'.
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0005
+
+LINE    PG/LN  A...B............................................................
+
+000072C                  05 FILLER PIC XX.
+000073C                  05 FILLER PIC X(04) VALUE 'INSS'.
+000074C                  05 FILLER PIC XXXX.
+000075C                  05 FILLER PIC X(06) VALUE 'PENSAO'.
+000076C                  05 FILLER PIC XX.
+000077C
+000078C                  05 FILLER PIC X(11) VALUE 'SAL.LIQUIDO'.
+000079C       *
+000080C               03 LINHA-DADOS.
+000081C                  05 REL-NR-MATRICULA          PIC X(06).
+000082C                  05 FILLER                    PIC X(01).
+000083C       *          05 REL-NOME-EMPREGADO        PIC X(30).
+000084C                  05 REL-NOME-EMPREGADO        PIC N(30) USAGE NATIONAL.
+warning: handling of USAGE NATIONAL is unfinished; implementation is likely to
+       + be changed
+warning: handling of USAGE NATIONAL is unfinished; implementation is likely to
+       + be changed
+000085C                  05 FILLER                    PIC X.
+000086C                  05 REL-QTD-HORAS-TRABALHADAS PIC ZZ9,99.
+000087C                  05 FILLER                    PIC X.
+000088C                  05 REL-VLR-REMUNERACAO-HORA  PIC ZZ9,99.
+000089C                  05 FILLER                    PIC X(02).
+000090C
+000091C                  05 REL-VLR-HE-50             PIC ZZ9,99.
+000092C                  05 FILLER                    PIC X(02).
+000093C                  05 REL-QTD-HE-50             PIC ZZ9,99.
+000094C                  05 FILLER                    PIC X.
+000095C                  05 REL-PGTO-HE-50            PIC Z.ZZ9,99.
+000096C                  05 FILLER                    PIC X(02).
+000097C
+000098C                  05 REL-VLR-HE-100            PIC ZZ9,99.
+000099C                  05 FILLER                    PIC X(02).
+000100C                  05 REL-QTD-HE-100            PIC ZZ9,99.
+000101C                  05 FILLER                    PIC X.
+000102C                  05 REL-PGTO-HE-100           PIC Z.ZZ9,99.
+000103C                  05 FILLER                    PIC X.
+000104C
+000105C                  05 REL-VLR-SAL-FAMILIA       PIC ZZZ9,99.
+000106C                  05 FILLER                    PIC X.
+000107C
+000108C                  05 REL-VLR-SALARIO-BRUTO     PIC ZZ.ZZ9,99.
+000109C                  05 FILLER                    PIC X.
+000110C
+000111C                  05 REL-VLR-IRPF              PIC ZZ.ZZ9,99.
+000112C                  05 FILLER                    PIC X.
+000113C                  05 REL-VLR-INSS              PIC ZZZ9,99.
+000114C                  05 FILLER                    PIC X.
+000115C                  05 REL-VLR-PENSAO-AL         PIC ZZ.ZZ9,99.
+000116C                  05 FILLER                    PIC XXXX.
+000117C
+000118C                  05 REL-VLR-SALARIO-LIQUIDO   PIC ZZ.ZZ9,99.
+000119C       *
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0006
+
+LINE    PG/LN  A...B............................................................
+
+000120C       ****************************************************************
+000121C       * FIM COPYBOOK RELATORIOFOLHA.cpy
+000122C       ****************************************************************
+000078
+000079         FD RELATORIOREJ.
+000080         01 RELATORIOREJ-FD          PIC X(132).
+000081
+000082        *----------------------------------------------------------------*
+000083         WORKING-STORAGE                 SECTION.
+000084        *----------------------------------------------------------------*
+000085         01 NUM-VERSAO               PIC 9(03) VALUE 1.
+000086
+000087        *    Indicadores
+000088         01 IND-FIM-APONTAMENTO      PIC X     VALUE 'N'.
+000089            88  FIM-APONTAMENTO                VALUE 'S'.
+000090
+000091        *    Data e hora correntes
+000092         01 DATA-CORRENTE            PIC 9(8)    VALUE ZEROS.
+000093         01 FILLER REDEFINES DATA-CORRENTE.
+000094            03 DATA-CORRENTE-ANO     PIC 9(4).
+000095            03 DATA-CORRENTE-MES     PIC 9(2).
+000096            03 DATA-CORRENTE-DIA     PIC 9(2).
+000097         01 HORA-CORRENTE            PIC X(8).
+000098         01 FILLER REDEFINES HORA-CORRENTE.
+000099            03 HORA-CORRENTE-HH      PIC 9(02).
+000100            03 HORA-CORRENTE-MM      PIC 9(02).
+000101            03 HORA-CORRENTE-SS      PIC 9(02).
+000102            03 HORA-CORRENTE-CC      PIC 9(02).
+000103
+000104        *    Contadores
+000105         01 CNT-APONTAMENTOS         PIC 9(9)    VALUE ZEROS.
+000106
+000107        ******************************************************************
+000108         PROCEDURE                       DIVISION.
+000109        ******************************************************************
+000110         000000-ROTINA-PRINCIPAL.
+000111             PERFORM 100000-INICIO
+000112
+000113             PERFORM 200000-PROCESSA
+000114               UNTIL FIM-APONTAMENTO
+000115
+000116             PERFORM 300000-FINALIZA
+000117
+000118             GOBACK.
+000119        *----------------------------------------------------------------*
+000120         100000-INICIO                   SECTION.
+000121        *----------------------------------------------------------------*
+000122             DISPLAY '000 - INICIO PROGRAMA FOLHAPAGAMENTO V.' NUM-VERSAO
+000123             ACCEPT DATA-CORRENTE FROM DATE YYYYMMDD
+000124             ACCEPT HORA-CORRENTE FROM TIME
+000125        *    Já move data e hora corrente para relatorio
+000126             MOVE '01/01/0001' TO TX-DATA
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0007
+
+LINE    PG/LN  A...B............................................................
+
+000127             MOVE '00:00:00'   TO TX-HORA
+000128             MOVE DATA-CORRENTE-DIA TO TX-DATA-DIA
+000129             MOVE DATA-CORRENTE-MES TO TX-DATA-MES
+000130             MOVE DATA-CORRENTE-ANO TO TX-DATA-ANO
+000131             MOVE HORA-CORRENTE-HH  TO TX-HORA-HH
+000132             MOVE HORA-CORRENTE-MM  TO TX-HORA-MM
+000133             MOVE HORA-CORRENTE-SS  TO TX-HORA-SS
+000134
+000135             OPEN INPUT  APONTAMENTOS
+000136                  OUTPUT RELATORIOFOLHA
+000137                         RELATORIOREJ
+000138
+000139        *    Ao abrir arquivo de dados, leia o primeiro registro
+000140             PERFORM 500000-READ-APONTAMENTOS
+000141             .
+000142        *----------------------------------------------------------------*
+000143         200000-PROCESSA                 SECTION.
+000144        *----------------------------------------------------------------*
+000145        *    Dica: Muitas vezes será útil exibir o nome da SECTION ou
+000146        *          parágrafo que está sendo executado.
+000147             DISPLAY "20000-PROCESSA"
+000148
+000149        * Dica: use o DISPLAY para exiibir alguns campos e checar se
+000150        *       está tudo em ordem.
+000151        *     DISPLAY "***************************************************
+000152             DISPLAY "NUM-MATRICULA          =" NR-MATRICULA
+000153        *     DISPLAY "NOME-EMPREGADO         =" NOME-EMPREGADO
+000154        *     DISPLAY "VLR-REMUNERACAO-HORA   =" VLR-REMUNERACAO-HORA
+000155        *     DISPLAY "QTD-HORAS-NORMAIS      =" QTD-HORAS-NORMAIS
+000156        *     DISPLAY "QTD-HORAS-EXTRAS-50PC  =" QTD-HORAS-EXTRAS-50PC
+000157        *     DISPLAY "QTD-HORAS-EXTRAS-100PC =" QTD-HORAS-EXTRAS-100PC
+000158        *     DISPLAY "QTD-DEPENDENTES-IRPF   =" QTD-DEPENDENTES-IRPF
+000159        *     DISPLAY "QTD-FILHOS-SF          =" QTD-FILHOS-SF
+000160
+000161
+000162        * Esquecer de ler o próximo registro TAMBÉM causa loop infinito...
+000163             PERFORM 500000-READ-APONTAMENTOS
+000164             .
+000165        *----------------------------------------------------------------*
+000166         300000-FINALIZA                 SECTION.
+000167        *----------------------------------------------------------------*
+000168             DISPLAY "FINALIZA"
+000169        * Esquecer de fechar os arquivos não dá erro, mas dá mensagem de
+000170        * alerta (warning)
+000171             CLOSE APONTAMENTOS RELATORIOFOLHA RELATORIOREJ.
+000172
+000173        *----------------------------------------------------------------*
+000174         500000-READ-APONTAMENTOS        SECTION.
+000175        *----------------------------------------------------------------*
+000176             READ APONTAMENTOS INTO APONTAMENTO-FD
+000177             AT END
+000178                MOVE 'S' TO IND-FIM-APONTAMENTO
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0008
+
+LINE    PG/LN  A...B............................................................
+
+000179        *       Cuidado: se esquecer de ligar este flag vai entrar em loop
+000180             NOT AT END
+000181                ADD 1 TO CNT-APONTAMENTOS
+000182             END-READ
+000183             .
+000184
+000185        ******************************************************************
+000186         END PROGRAM FOLHAPAGAMENTO1.
+000187        ******************************************************************
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0009
+
+SIZE  TYPE           LVL  NAME                           PICTURE
+
+00068 FILE                APONTAMENTOS
+00068 GROUP          01   APONTAMENTO-FD
+00006 ALPHANUMERIC   03   NR-MATRICULA                   X(06)
+00030 ALPHANUMERIC   03   NOME-EMPREGADO                 X(30)
+00005 NUMERIC        03   VLR-REMUNERACAO-HORA           9(3)V99
+00005 NUMERIC        03   QTD-HORAS-NORMAIS              9(3)V99
+00005 NUMERIC        03   QTD-HORAS-EXTRAS-50PC          9(3)V99
+00005 NUMERIC        03   QTD-HORAS-EXTRAS-100PC         9(3)V99
+00002 NUMERIC        03   QTD-DEPENDENTES-IRPF           9(2)
+00002 NUMERIC        03   QTD-FILHOS-SF                  9(2)
+00008 NUMERIC        03   VLR-PENSAO-ALIMENTICIA         9(6)V99
+
+00769 FILE                RELATORIOFOLHA
+00769 GROUP          01   RELATORIO-FOLHA-FD
+00769 GROUP          02   CABECALHO-FOLHA
+00160 GROUP          03   CAB-LINHA-1
+00010 ALPHANUMERIC   07   TX-DATA                        X(10)
+00010 GROUP          07   FILLER, REDEFINES TX-DATA
+00002 NUMERIC        09   TX-DATA-DIA                    9(02)
+00001 ALPHANUMERIC   09   FILLER                         X
+00002 NUMERIC        09   TX-DATA-MES                    9(02)
+00001 ALPHANUMERIC   09   FILLER                         X
+00004 NUMERIC        09   TX-DATA-ANO                    9(04)
+00030 ALPHANUMERIC   07   FILLER                         X(30)
+00030 ALPHANUMERIC   07   FILLER                         X(30)
+00081 ALPHANUMERIC   07   FILLER                         X(81)
+00005 ALPHANUMERIC   07   FILLER                         X(05)
+00004 NUMERIC        07   REL-NUM-PAGINA                 ZZZ9
+00069 GROUP          03   CAB-LINHA-2
+00010 ALPHANUMERIC   07   TX-HORA                        X(10)
+00008 GROUP          07   FILLER, REDEFINES TX-HORA
+00002 NUMERIC        09   TX-HORA-HH                     9(02)
+00001 ALPHANUMERIC   09   FILLER                         X
+00002 NUMERIC        09   TX-HORA-MM                     9(02)
+00001 ALPHANUMERIC   09   FILLER                         X
+00002 NUMERIC        09   TX-HORA-SS                     9(02)
+00030 ALPHANUMERIC   07   FILLER                         X(30)
+00014 ALPHANUMERIC   07   FILLER                         X(14)
+00015 ALPHANUMERIC   07   TX-MES-APURACAO                X(15)
+00160 ALPHANUMERIC   03   CAB-LINHA-3                    X(160)
+00190 GROUP          03   LINHA-TITULOS
+00006 ALPHANUMERIC   05   FILLER                         X(06)
+00001 ALPHANUMERIC   05   FILLER                         X
+00060 ALPHANUMERIC   05   FILLER                         X(60)
+00001 ALPHANUMERIC   05   FILLER                         X
+00006 ALPHANUMERIC   05   FILLER                         X(06)
+00001 ALPHANUMERIC   05   FILLER                         X
+00006 ALPHANUMERIC   05   FILLER                         X(06)
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 ALPHANUMERIC   05   FILLER                         X(07)
+00001 ALPHANUMERIC   05   FILLER                         X
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0010
+
+SIZE  TYPE           LVL  NAME                           PICTURE
+
+00007 ALPHANUMERIC   05   FILLER                         X(07)
+00001 ALPHANUMERIC   05   FILLER                         X
+00008 ALPHANUMERIC   05   FILLER                         X(08)
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 ALPHANUMERIC   05   FILLER                         X(07)
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 ALPHANUMERIC   05   FILLER                         X(07)
+00001 ALPHANUMERIC   05   FILLER                         X
+00008 ALPHANUMERIC   05   FILLER                         X(08)
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 ALPHANUMERIC   05   FILLER                         X(07)
+00001 ALPHANUMERIC   05   FILLER                         X
+00009 ALPHANUMERIC   05   FILLER                         X(09)
+00006 ALPHANUMERIC   05   FILLER                         XXXXXX
+00006 ALPHANUMERIC   05   FILLER                         X(06)
+00002 ALPHANUMERIC   05   FILLER                         XX
+00004 ALPHANUMERIC   05   FILLER                         X(04)
+00004 ALPHANUMERIC   05   FILLER                         XXXX
+00006 ALPHANUMERIC   05   FILLER                         X(06)
+00002 ALPHANUMERIC   05   FILLER                         XX
+00011 ALPHANUMERIC   05   FILLER                         X(11)
+00190 GROUP          03   LINHA-DADOS
+00006 ALPHANUMERIC   05   REL-NR-MATRICULA               X(06)
+00001 ALPHANUMERIC   05   FILLER                         X(01)
+00060 NATIONAL       05   REL-NOME-EMPREGADO             N(30)
+00001 ALPHANUMERIC   05   FILLER                         X
+00006 NUMERIC        05   REL-QTD-HORAS-TRABALHADAS      ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00006 NUMERIC        05   REL-VLR-REMUNERACAO-HORA       ZZ9,99
+00002 ALPHANUMERIC   05   FILLER                         X(02)
+00006 NUMERIC        05   REL-VLR-HE-50                  ZZ9,99
+00002 ALPHANUMERIC   05   FILLER                         X(02)
+00006 NUMERIC        05   REL-QTD-HE-50                  ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00008 NUMERIC        05   REL-PGTO-HE-50                 Z.ZZ9,99
+00002 ALPHANUMERIC   05   FILLER                         X(02)
+00006 NUMERIC        05   REL-VLR-HE-100                 ZZ9,99
+00002 ALPHANUMERIC   05   FILLER                         X(02)
+00006 NUMERIC        05   REL-QTD-HE-100                 ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00008 NUMERIC        05   REL-PGTO-HE-100                Z.ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 NUMERIC        05   REL-VLR-SAL-FAMILIA            ZZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00009 NUMERIC        05   REL-VLR-SALARIO-BRUTO          ZZ.ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00009 NUMERIC        05   REL-VLR-IRPF                   ZZ.ZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00007 NUMERIC        05   REL-VLR-INSS                   ZZZ9,99
+00001 ALPHANUMERIC   05   FILLER                         X
+00009 NUMERIC        05   REL-VLR-PENSAO-AL              ZZ.ZZ9,99
+00004 ALPHANUMERIC   05   FILLER                         XXXX
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0011
+
+SIZE  TYPE           LVL  NAME                           PICTURE
+
+00009 NUMERIC        05   REL-VLR-SALARIO-LIQUIDO        ZZ.ZZ9,99
+
+00132 FILE                RELATORIOREJ
+00132 ALPHANUMERIC   01   RELATORIOREJ-FD                X(132)
+
+      WORKING-STORAGE SECTION
+
+00003 NUMERIC        01   NUM-VERSAO                     9(03)
+
+00001 ALPHANUMERIC   01   IND-FIM-APONTAMENTO            X
+      CONDITIONAL    88   FIM-APONTAMENTO
+
+00008 NUMERIC        01   DATA-CORRENTE                  9(8)
+
+00008 GROUP          01   FILLER, REDEFINES DATA-CORRENTE
+00004 NUMERIC        03   DATA-CORRENTE-ANO              9(4)
+00002 NUMERIC        03   DATA-CORRENTE-MES              9(2)
+00002 NUMERIC        03   DATA-CORRENTE-DIA              9(2)
+
+00008 ALPHANUMERIC   01   HORA-CORRENTE                  X(8)
+
+00008 GROUP          01   FILLER, REDEFINES HORA-CORRENTE
+00002 NUMERIC        03   HORA-CORRENTE-HH               9(02)
+00002 NUMERIC        03   HORA-CORRENTE-MM               9(02)
+00002 NUMERIC        03   HORA-CORRENTE-SS               9(02)
+00002 NUMERIC        03   HORA-CORRENTE-CC               9(02)
+
+00009 NUMERIC        01   CNT-APONTAMENTOS               9(9)
+
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0012
+
+NAME                           DEFINED                REFERENCES
+
+APONTAMENTOS                   58       69      135     171     176    x4
+APONTAMENTO-FD                 70      *176                            x1
+NR-MATRICULA                   15       152                            x1
+NOME-EMPREGADO                 16     referenced by parent
+VLR-REMUNERACAO-HORA           17     referenced by parent
+QTD-HORAS-NORMAIS              18     referenced by parent
+QTD-HORAS-EXTRAS-50PC          19     referenced by parent
+QTD-HORAS-EXTRAS-100PC         20     referenced by parent
+QTD-DEPENDENTES-IRPF           21     referenced by parent
+QTD-FILHOS-SF                  22     referenced by parent
+VLR-PENSAO-ALIMENTICIA         23     referenced by parent
+
+RELATORIOFOLHA                 60       74     *136     171            x3
+RELATORIO-FOLHA-FD             75     referenced by child
+CABECALHO-FOLHA                10     referenced by child
+CAB-LINHA-1                    11     referenced by child
+TX-DATA                        12      *126                            x1
+TX-DATA-DIA                    14      *128                            x1
+TX-DATA-MES                    16      *129                            x1
+TX-DATA-ANO                    18      *130                            x1
+REL-NUM-PAGINA                 24     not referenced
+CAB-LINHA-2                    26     referenced by child
+TX-HORA                        27      *127                            x1
+TX-HORA-HH                     29      *131                            x1
+TX-HORA-MM                     31      *132                            x1
+TX-HORA-SS                     33      *133                            x1
+TX-MES-APURACAO                37     not referenced
+CAB-LINHA-3                    39     not referenced
+LINHA-TITULOS                  41     not referenced
+LINHA-DADOS                    80     not referenced
+REL-NR-MATRICULA               81     not referenced
+REL-NOME-EMPREGADO             84     not referenced
+REL-QTD-HORAS-TRABALHADAS      86     not referenced
+REL-VLR-REMUNERACAO-HORA       88     not referenced
+REL-VLR-HE-50                  91     not referenced
+REL-QTD-HE-50                  93     not referenced
+REL-PGTO-HE-50                 95     not referenced
+REL-VLR-HE-100                 98     not referenced
+REL-QTD-HE-100                 100    not referenced
+REL-PGTO-HE-100                102    not referenced
+REL-VLR-SAL-FAMILIA            105    not referenced
+REL-VLR-SALARIO-BRUTO          108    not referenced
+REL-VLR-IRPF                   111    not referenced
+REL-VLR-INSS                   113    not referenced
+REL-VLR-PENSAO-AL              115    not referenced
+REL-VLR-SALARIO-LIQUIDO        118    not referenced
+
+RELATORIOREJ                   62       79     *137     171            x3
+RELATORIOREJ-FD                80     not referenced
+
+NUM-VERSAO                     85       122                            x1
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0013
+
+NAME                           DEFINED                REFERENCES
+
+IND-FIM-APONTAMENTO            88      *178                            x1
+FIM-APONTAMENTO                89       114                            x1
+DATA-CORRENTE                  92      *123                            x1
+DATA-CORRENTE-ANO              94       130                            x1
+DATA-CORRENTE-MES              95       129                            x1
+DATA-CORRENTE-DIA              96       128                            x1
+HORA-CORRENTE                  97      *124                            x1
+HORA-CORRENTE-HH               99       131                            x1
+HORA-CORRENTE-MM               100      132                            x1
+HORA-CORRENTE-SS               101      133                            x1
+HORA-CORRENTE-CC               102    not referenced
+CNT-APONTAMENTOS               105      181                            x1
+
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0014
+
+LABEL                          DEFINED                REFERENCES
+
+E FOLHAPAGAMENTO1              108
+P 000000-ROTINA-PRINCIPAL      110    not referenced
+S 100000-INICIO                120      111                            x1
+S 200000-PROCESSA              143      113                            x1
+S 300000-FINALIZA              166      116                            x1
+S 500000-READ-APONTAMENTOS     174      140     163                    x2
+
+GnuCOBOL 3.1.2.0        c:\desenv\COBOL\fopa Sun Dec 04 11:39:44 2022  Page 0015
+
+Error/Warning summary:
+
+RELATORIOFOLHA.CPY:84: warning: handling of USAGE NATIONAL is unfinished; implementation is likely to be changed
+RELATORIOFOLHA.CPY:84: warning: handling of USAGE NATIONAL is unfinished; implementation is likely to be changed
+
+2 warnings in compilation group
+0 errors in compilation group
